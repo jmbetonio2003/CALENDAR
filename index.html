@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#172554">
+  <meta name="description" content="Private client follow-up calendar and relationship manager.">
+  <title>Client Follow-Up Manager</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./config.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <main id="auth-screen" class="auth-wrap">
+    <section class="auth-card">
+      <div class="brand-mark">CF</div>
+      <p class="eyebrow">PRIVATE WORKSPACE</p>
+      <h1>Client Follow-Up Manager</h1>
+      <p class="muted">Keep every client conversation and next step in one place.</p>
+      <form id="login-form" class="stack">
+        <label>Email address<input id="login-email" type="email" autocomplete="username" required placeholder="you@example.com"></label>
+        <label>Password<input id="login-password" type="password" autocomplete="current-password" required placeholder="Your password"></label>
+        <button class="primary full" type="submit">Sign in</button>
+      </form>
+      <p id="auth-message" class="small muted">Sign in with the user you created in Supabase.</p>
+    </section>
+  </main>
+
+  <div id="app-shell" class="app-shell hidden">
+    <aside class="sidebar" id="sidebar">
+      <div class="side-brand"><div class="brand-mark small-mark">CF</div><div><strong>Client Follow-Up</strong><span>Manager</span></div></div>
+      <nav class="nav-list" aria-label="Main navigation">
+        <button class="nav-btn active" data-view="dashboard">▦ <span>Dashboard</span></button>
+        <button class="nav-btn" data-view="calendar">▦ <span>Calendar</span></button>
+        <button class="nav-btn" data-view="clients">♙ <span>Clients</span></button>
+        <button class="nav-btn" data-view="followups">◷ <span>Follow-ups</span></button>
+        <button class="nav-btn" data-view="communications">☰ <span>Conversation history</span></button>
+        <button class="nav-btn" data-view="reports">▥ <span>Reports & analytics</span></button>
+        <button class="nav-btn" data-view="settings">⚙ <span>Settings</span></button>
+      </nav>
+      <div class="sidebar-bottom"><span class="private-dot"></span><span>Private workspace</span><button id="signout-btn" class="text-btn">Sign out</button></div>
+    </aside>
+
+    <section class="main-area">
+      <header class="topbar">
+        <button id="mobile-menu" class="icon-btn" aria-label="Open menu">☰</button>
+        <div><span class="eyebrow" id="top-eyebrow">OVERVIEW</span><h2 id="page-title">Dashboard</h2></div>
+        <div class="top-actions"><button id="theme-toggle" class="icon-btn" title="Toggle light/dark mode">◐</button><button id="quick-add" class="primary">＋ <span>New client</span></button></div>
+      </header>
+      <div id="page-content" class="page-content">
+        <div class="loading-panel">Loading your workspace…</div>
+      </div>
+    </section>
+  </div>
+
+  <dialog id="client-dialog" class="modal">
+    <form id="client-form" class="modal-card">
+      <div class="modal-head"><div><p class="eyebrow">CLIENT PROFILE</p><h3 id="client-dialog-title">Register client</h3></div><button type="button" class="icon-btn" data-close="client-dialog">✕</button></div>
+      <input type="hidden" id="client-id">
+      <div class="form-grid">
+        <label class="span-2">Full name *<input id="client-name" required maxlength="140" placeholder="Client full name"></label>
+        <label>Email address<input id="client-email" type="email" placeholder="Optional"></label>
+        <label>Phone number <span class="muted">(optional)</span><input id="client-phone" type="tel" placeholder="Optional"></label>
+        <label>Client temperature<select id="client-temperature"><option value="cold">Cold</option><option value="warm" selected>Warm</option><option value="hot">Hot</option></select></label>
+        <label>Interested Toyota model<input id="client-model" placeholder="e.g. Vios, Raize, Fortuner"></label>
+        <label class="span-2">Client needs / preferences<textarea id="client-needs" rows="3" placeholder="What is the client looking for?"></textarea></label>
+        <label class="span-2">General notes<textarea id="client-general-notes" rows="2" placeholder="Other useful details"></textarea></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary" data-close="client-dialog">Cancel</button><button class="primary" type="submit">Save client</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="followup-dialog" class="modal">
+    <form id="followup-form" class="modal-card">
+      <div class="modal-head"><div><p class="eyebrow">SCHEDULE</p><h3 id="followup-dialog-title">Schedule follow-up</h3></div><button type="button" class="icon-btn" data-close="followup-dialog">✕</button></div>
+      <input type="hidden" id="followup-id">
+      <div class="form-grid">
+        <label class="span-2">Client *<select id="followup-client" required></select></label>
+        <label>Date *<input id="followup-date" type="date" required></label>
+        <label>Time *<input id="followup-time" type="time" required></label>
+        <label>Priority<select id="followup-priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></label>
+        <label>Reminder<input id="followup-reminder" type="number" min="0" max="10080" value="60"><small class="muted">Minutes before (delivery setup required)</small></label>
+        <label class="span-2">Purpose / next step *<textarea id="followup-purpose" rows="3" required placeholder="What needs to happen?"></textarea></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary" data-close="followup-dialog">Cancel</button><button class="primary" type="submit">Save follow-up</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="communication-dialog" class="modal">
+    <form id="communication-form" class="modal-card">
+      <div class="modal-head"><div><p class="eyebrow">OUTGOING COMMUNICATION</p><h3>Log conversation</h3></div><button type="button" class="icon-btn" data-close="communication-dialog">✕</button></div>
+      <div class="form-grid">
+        <label class="span-2">Client *<select id="comm-client" required></select></label>
+        <label>Channel<select id="comm-channel"><option>Facebook Messenger</option><option>Phone call</option><option>SMS / Text</option><option>Email</option><option>Walk-in / In-person</option><option>Other</option></select></label>
+        <label>Date and time<input id="comm-date" type="datetime-local" required></label>
+        <label class="span-2">Conversation notes<textarea id="comm-notes" rows="3" placeholder="What did you discuss?"></textarea></label>
+        <label class="span-2">Client questions / concerns<textarea id="comm-questions" rows="2"></textarea></label>
+        <label class="span-2">Agreed next steps<textarea id="comm-next" rows="2"></textarea></label>
+        <label class="span-2">Pasted transcript (optional)<textarea id="comm-transcript" rows="3"></textarea></label>
+        <label class="span-2">Resulting follow-up date (optional)<input id="comm-follow-date" type="date"></label>
+      </div>
+      <div class="modal-actions"><button type="button" class="secondary" data-close="communication-dialog">Cancel</button><button class="primary" type="submit">Save conversation</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
